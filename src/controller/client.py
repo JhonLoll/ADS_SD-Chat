@@ -1,15 +1,39 @@
-import threading, client, socket, socketserver
+import socket
+import flet as ft
 
-def client(host, port):
-    """Starts a client that connects to a server."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((host, port))
-        # Client logic here
-        # For example, send a message to the server
-        s.sendall(b'Hello, server!')
+def client(host: str, port: int):
+    # Cria o socket do cliente
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Conecta ao servidor
+    client_socket.connect((host, port))
 
-        data = s.recv(1024)
+    # Informa que o cliente foi conectado ao servidor
+    print(f"Conectado ao servidor {host}:{port}")
 
-        print('Received', repr(data))
+    msg = ""
 
-client('localhost', 9999)
+    while msg != "sair":
+        # Lê a mensagem do usuário
+        msg = input("Digite sua mensagem (ou 'sair' para encerrar): ")
+        # Envia a mensagem para o servidor
+        client_socket.send(msg.encode())
+        # Recebe a resposta do servidor
+        resposta = client_socket.recv(1024).decode()
+        # Exibe a resposta do servidor
+        print(f"Servidor: {resposta}")
+
+    # Fecha o socket do cliente
+    client_socket.close()
+    print("Conexão encerrada.")
+
+# Exemplo de uso
+if __name__ == "__main__":
+    # Captura automaticamente o IP do servidor
+    host = socket.gethostbyname(socket.gethostname())
+    port = 12345
+
+    client(host, port)
+
+
+
+    
