@@ -16,7 +16,7 @@ class ChatMessage(ft.Row):
         self.controls = [
             ft.CircleAvatar(
                 content=ft.Text(self.get_iniciais(message.sender), 
-                size=20, color=ft.colors.WHITE), 
+                size=20, color=ft.Colors.WHITE), 
                 bgcolor=self.get_avatar_color(message.sender),
             ),
             ft.Column(
@@ -55,5 +55,5 @@ class ChatMessage(ft.Row):
         if name:
             return list_colors[hash(name) % len(list_colors)]
         else:
-            return ft.Colors.GRAY_100
+            return ft.Colors.GREY_100
         

@@ -1,4 +1,3 @@
-from email import message
 import flet as ft
 
 from model.model import Message, ChatMessage
@@ -23,29 +22,38 @@ def main(page: ft.Page):
                     message_type="system"
                 )
             )
+            page.update()
 
     def send_message(content: str, user_name: str = "User"):
         if content:
             message = Message(sender=user_name, content=content)
             message_list.controls.append(ChatMessage(message))
-            input_row.controls[0].value = ""  # Limpa o campo de input
-            input_row.controls[0].focus()  # Retorna o foco para o campo de input
+            message_input.value = ""  # Limpa o campo de input
+            message_input.focus()  # Retorna o foco para o campo de input
             page.update()
+
+    def on_message(message: Message):
+        message_list.controls.append(ChatMessage(message))
+        page.update()
+
+    page.pubsub.subscribe(
+        on_message
+    )
 
     user_name = ft.TextField(
         label="Digite seu nome", 
         width=400, 
-        on_submit=lambda e: join_chat(e.control.value)
+        on_submit=lambda e: join_chat
     )
 
     set_user_name = ft.AlertDialog(
-        title="Bem-vindo ao Chat",
+        title=ft.Text("Bem-vindo ao Chat", size=20),
         content=ft.Column(
             [
                 user_name,
                 ft.TextButton(
                     text="Entrar",
-                    on_click=lambda e: join_chat(e),
+                    on_click=lambda e: join_chat,
                 ),
             ],
             spacing=10,
@@ -62,9 +70,9 @@ def main(page: ft.Page):
         controls=[
             message_input,
             ft.IconButton(
-                icon=ft.icons.SEND,
+                icon=ft.Icons.SEND,
                 tooltip="Enviar",
-                on_click=lambda e: send_message(input_row.controls[0].value),
+                on_click=lambda e: send_message(message_input.value, user_name.value),
             ),
         ],
         alignment=ft.MainAxisAlignment.CENTER,
@@ -87,6 +95,10 @@ def main(page: ft.Page):
             spacing=10,
         )
     )
+
+    # Exibe o diálogo de configuração do nome de usuário
+    set_user_name.open = True
+    page.overlay.append(set_user_name)
 
     page.update()
 
