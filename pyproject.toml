@@ -1,41 +1,36 @@
 [project]
 name = "ads-sd-chat"
 version = "0.1.0"
-description = ""
+description = "Aplicativo de chat com Flet e sockets em Python"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    { name = "Flet developer", email = "you@example.com" }
+    { name = "Jhon Silva", email = "jhonlene12@gmail.com" },
+    { name = "Ayalon Dutra", email = "exemple@email.com" },
+    { name = "Hiago Ribeiro", email = "exemple@email.com" },
+    { name = "Danilo Borges", email = "exemple@email.com" },
+    { name = "Matheus Moreira", email = "exemple@email.com" }
 ]
 dependencies = [
-  "flet==0.27.6"
+    "flet==0.27.6"
 ]
 
 [tool.flet]
-# org name in reverse domain name notation, e.g. "com.mycompany".
-# Combined with project.name to build bundle ID for iOS and Android apps
-org = "com.mycompany"
-
-# project display name that is used as an app title on Android and iOS home screens,
-# shown in window titles and about app dialogs on desktop.
+org = "com.ads"
 product = "ads-sd-chat"
-
-# company name to display in about app dialogs
-company = "Flet"
-
-# copyright text to display in about app dialogs
-copyright = "Copyright (C) 2025 by Flet"
+company = "ADS IFTO"
+copyright = "Copyright (C) 2025 by Equipe ADS IFTO"
 
 [tool.flet.app]
-path = "src"
+path = "main.py"
 
 [tool.uv]
 dev-dependencies = [
-    "flet[all]==0.27.6",
+    "flet[all]==0.27.6"
 ]
 
 [tool.poetry]
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-flet = {extras = ["all"], version = "0.27.6"}
+flet = { extras = ["all"], version = "0.27.6" }

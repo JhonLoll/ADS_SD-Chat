@@ -1,8 +1,12 @@
+from http import client
 import flet as ft
 import socket
 from threading import Thread
 # from controller.servidor import Chat, client_list
 from model.model import Message, ChatMessage
+
+# Variável global para o socket do cliente
+client_socket = None
 
 def main(page: ft.Page):
     page.title = "Chat Socket"
@@ -12,6 +16,8 @@ def main(page: ft.Page):
 
     # Função para conectar ao servidor
     def connect_to_server(host: str, port: int):
+        # Permite alterar a variável global client_socket
+        global client_socket
         try:
             # Cria o socket do cliente
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,12 +68,9 @@ def main(page: ft.Page):
             page.session.set("user_name", user_name.value)
             set_user_name.open = False
             message_input.prefix = ft.Text(f"{user_name.value}: ")
-            page.pubsub.send_all(
-                Message(
-                    sender="Sistema: ", 
-                    content=f"{user_name.value} entrou no chat", 
-                    message_type="system"
-                )
+            # Envia a mensagem de "entrou no chat" para todos os usuarios
+            client_socket.send(
+                f"{user_name.value} entrou no chat".encode()
             )
             # Conecta ao servidor com o host e porta informados
             connect_to_server(host_input.value, int(port_input.value))
@@ -77,13 +80,13 @@ def main(page: ft.Page):
 
     # Função que exibe a mensagem quando o usuário sair do chat
     def leave_chat(e):
-        page.pubsub.send_all(
-            Message(
-                sender="Sistema: ", 
-                content=f"{user_name.value} saiu do chat", 
-                message_type="system"
+        # Envia a mensagem de "saiu do chat" para todos os usuarios
+        if client_socket:
+            client_socket.send(
+                f"{user_name.value} saiu do chat".encode()
             )
-        )
+            client_socket.close()
+        # Limpa a lista de mensagens
         page.pubsub.unsubscribe(
             on_message
         )
@@ -95,7 +98,9 @@ def main(page: ft.Page):
         if content:
             try:
                 # Envia a mensagem para o servidor
-                page.client_socket.send(content.encode())
+                client_socket.send(
+                    f"{user_name.value}: {content}".encode()
+                )
             except Exception as e:
                 print(f"Erro ao enviar mensagem: {e}")
                 page.snackbar = ft.Snackbar(
