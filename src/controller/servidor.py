@@ -1,62 +1,85 @@
-import socket                  # Importa o módulo de rede
-from threading import Thread   # Importa suporte para execução em threads (paralelismo)
+import socket
+import threading
+from datetime import datetime
 
-client_list = []               # Lista para armazenar todos os clientes conectados
+# Lista para armazenar os clientes conectados
+clients = []
 
-# Função que lida com a comunicação com cada cliente
-def Chat(client_socket):
+# Função para o broadcast de mensagens
+def broadcast(message, client_socket):
+    for client in clients:
+        if client != client_socket:
+            try:
+                # Envia a mensagem para todos os clientes, exceto o que enviou
+                client.send(message)
+            except:
+                # Se falhar, remove o cliente da lista
+                clients.remove(client)
+
+# Função para lidar com cada cliente
+def handle_client(client_socket, client_address):
+    try:
+        nome = client_socket.recv(1024).decode('utf-8')
+        print(f"Nome do cliente {client_address}: {nome}")
+    except:
+        print(f"Erro ao receber o nome do cliente {client_address}.")
+        client_socket.close()
+        return
+    
+    boas_vindas = f"[{datetime.now().strftime('%H:%M:%S')}] {nome} entrou no chat!"
+    broadcast(boas_vindas, client_socket)
+
     while True:
         try:
             # Recebe a mensagem do cliente
-            mensagem = client_socket.recv(1024).decode()
-            if not mensagem or mensagem == "sair":  # Se for vazio ou sair, encerra a conexão
-                break
-
-            # Envia a mensagem para todos os outros clientes conectados
-            for client in client_list:
-                if client != client_socket:
-                    client.send(mensagem.encode())
-
-        except Exception as e:
-            # Exibe erro se houver problema ao receber/enviar
-            print(f"Erro: {e}")
+            msg = client_socket.recv(1024).decode('utf-8')
+            if msg:
+                horario = datetime.now().strftime('%H:%M:%S')
+                broadcast(f"[{horario}] {nome}: {msg}".encode('utf-8'), client_socket)
+        except:
+            # Se ocorrer um erro, remove o cliente e encerra o loop
+            clients.remove(client_socket)
+            client_socket.close()
+            broadcast(f"[{datetime.now().strftime('%H:%M:%S')}] {nome} saiu do chat.".encode('utf-8'), client_socket)
             break
 
-    # Remove o cliente da lista e fecha o socket ao sair
-    client_list.remove(client_socket)
-    client_socket.close()
+# Função principal do servidor
+def start_server():
+    # Cria um socket UDP temporário para pegar o IP de saida
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    # Pega o IP de saida
+    host = s.getsockname()[0]
 
-# Captura o IP local da máquina de forma confiável
-# Isso funciona mesmo que a máquina tenha vários IPs (ex: Wi-Fi, Ethernet)
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Cria um socket UDP temporário
-s.connect(("8.8.8.8", 80))                            # Conecta ao DNS do Google
-host = s.getsockname()[0]                             # Pega o IP local usado para "sair" para a internet
-s.close()                                             # Fecha o socket temporário
+    s.close()
 
-port = 12345  # Porta em que o servidor irá escutar
+    port = int(input("Digite a porta do servidor: "))
+    
+    # Cria o socket TCP do servidor
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    # Associa o socket a um endereço e porta
+    server_socket.bind((host, port))
 
-# Cria o socket TCP para o servidor
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Coloca o servidor em modo de escuta
+    server_socket.listen(5)
 
-# Associa o socket ao IP e porta definidos
-server_socket.bind((host, port))
+    print(f"Servidor iniciado em {host}:{port}")
+    print("Aguardando conexões...")
 
-# Informa no terminal onde o servidor está rodando
-print(f"Servidor iniciado em {host}:{port}")
+    while True:
+        # Aceita uma nova conexão
+        client_socket, client_address = server_socket.accept()
+        print(f"Conexão aceita de {client_address}")
 
-# Coloca o socket em modo de escuta (aguardando conexões), até 5 pendências
-server_socket.listen(5)
+        # Adiciona o cliente à lista de clientes conectados
+        clients.append(client_socket)
 
-print("Aguardando conexões...")
+        # Cria uma nova thread para lidar com o cliente
+        client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))
+        client_thread.start()
 
-# Loop infinito para aceitar várias conexões
-while True:
-    # Aceita uma nova conexão
-    client_socket, client_address = server_socket.accept()
-    print(f"Conexão estabelecida com {client_address}")  # Exibe IP/porta do cliente
+        print(f"Atualmente {len(clients)} cliente(s) conectado(s).")
 
-    # Adiciona o cliente à lista
-    client_list.append(client_socket)
-
-    # Cria e inicia uma nova thread para lidar com o cliente
-    Thread(target=Chat, args=(client_socket,)).start()
+if __name__ == "__main__":
+    start_server()

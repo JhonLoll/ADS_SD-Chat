@@ -1,216 +1,157 @@
-from http import client
+from operator import add
+from os import name
+import threading
 import flet as ft
-import socket
-from threading import Thread
-# from controller.servidor import Chat, client_list
-from model.model import Message, ChatMessage
-
-# Variável global para o socket do cliente
-client_socket = None
+from datetime import datetime
+from controller.cliente import ChatClient
+from model.model import ChatMessage, Message
+from controller.servidor import broadcast, handle_client
 
 def main(page: ft.Page):
     page.title = "Chat Socket"
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.STRETCH
-    page.padding = 20
+    page.window.width = 400
+    page.window.height = 600
+    # page.bgcolor = "#D9D9D9"
+    page.fonts = {
+        "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap",
+        "RobotoMono": "https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400&display=swap",
+    }
+    page.theme_mode = ft.ThemeMode.DARK
+    # page.theme = ft.Theme(
+    #     primary=ft.colors.BLUE_500,
+    #     secondary=ft.colors.BLUE_500,
+    #     font_family="Roboto",
+    #     font_size=14,
+    # )
+    page.scroll = ft.ScrollMode.AUTO
 
-    # Função para conectar ao servidor
-    def connect_to_server(host: str, port: int):
-        # Permite alterar a variável global client_socket
-        global client_socket
-        try:
-            # Cria o socket do cliente
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # Conecta ao servidor
-            client_socket.connect((host, port))
-            page.client_socket = client_socket  # Armazena o socket do cliente na página
-            print(f"Conectado ao servidor {host}:{port}")
+    cliente = ChatClient()
 
-            # Inicia uma thread para receber mensagens do servidor
-            Thread(target=receive_messages, args=(client_socket,), daemon=True).start()
-
-        except Exception as e:
-            print(f"Erro ao conectar ao servidor: {e}")
-            page.snackbar = ft.Snackbar(
-                content=ft.Text(f"Erro ao conectar ao servidor: {e}"),
-                open=True,
-            )
-            page.update()
-
-    # Função para receber mensagens do servidor
-    def receive_messages(client_socket):
-        while True:
-            try:
-                # Recebe a mensagem do servidor
-                mensagem = client_socket.recv(1024).decode()
-                if not mensagem:
-                    break
-
-                # Adiciona a mensagem à lista de mensagens
-                message = Message(sender="Servidor", content=mensagem)
-                message_list.controls.append(ChatMessage(message))
-                page.update()
-
-            except Exception as e:
-                print(f"Erro ao receber mensagem: {e}")
-                break
-
-        client_socket.close()
-        print("Conexão encerrada.")
-
-
-    # Função que exibe a mensagem quando o usuário entrar no chat
-    def join_chat(e):
-        if not user_name.value:
-            user_name.error_text = "Por favor, insira seu nome."
-            user_name.update()
-        else:
-            page.session.set("user_name", user_name.value)
-            set_user_name.open = False
-            message_input.prefix = ft.Text(f"{user_name.value}: ")
-            # Envia a mensagem de "entrou no chat" para todos os usuarios
-            client_socket.send(
-                f"{user_name.value} entrou no chat".encode()
-            )
-            # Conecta ao servidor com o host e porta informados
-            connect_to_server(host_input.value, int(port_input.value))
-            # Esconde o diálogo de configuração do nome de usuário
-            user_name.visible = False,
-            page.update()
-
-    # Função que exibe a mensagem quando o usuário sair do chat
-    def leave_chat(e):
-        # Envia a mensagem de "saiu do chat" para todos os usuarios
-        if client_socket:
-            client_socket.send(
-                f"{user_name.value} saiu do chat".encode()
-            )
-            client_socket.close()
-        # Limpa a lista de mensagens
-        page.pubsub.unsubscribe(
-            on_message
-        )
-        page.session.clear()
-        page.update()
-
-    # Função que envia a mensagem para o chat
-    def send_message(content: str, user_name: str = "User"):
-        if content:
-            try:
-                # Envia a mensagem para o servidor
-                client_socket.send(
-                    f"{user_name.value}: {content}".encode()
-                )
-            except Exception as e:
-                print(f"Erro ao enviar mensagem: {e}")
-                page.snackbar = ft.Snackbar(
-                    content=ft.Text(f"Erro ao enviar mensagem: {e}"),
-                    open=True,
-                )
-                page.update()
-            # Cria a mensagem com o nome do usuário
-            message = Message(sender=user_name, content=content)
-            # Adiciona a mensagem à lista de mensagens
-            message_list.controls.append(ChatMessage(message))
-            message_input.value = ""  # Limpa o campo de input
-            message_input.focus()  # Retorna o foco para o campo de input
-            page.update()
-
-    # Função que exibe a mensagem quando o usuário enviar uma mensagem
-    def on_message(message: Message):
-        message_list.controls.append(ChatMessage(message))
-        page.update()
-
-    # Subscreve na sessão para receber mensagens
-    page.pubsub.subscribe(
-        on_message
-    )
-
-    # Adiciona o evento de fechar a página
-    page.on_close = leave_chat
-
-    # Cria o campo de input para o host
-    host_input = ft.TextField(
-        label="Host", 
-        width=400, 
-        hint_text=socket.gethostbyname(socket.gethostname())
-    )
-    # Cria o campo de input para a porta
-    port_input = ft.TextField(
-        label="Porta", 
-        width=400, 
-        hint_text="12345"
-    )
-    # Cria o campo de input para o nome de usuário
-    user_name = ft.TextField(
-        label="Digite seu nome", 
-        width=400,
-    )
-
-    # Cria o diálogo de configuração do nome de usuário
-    set_user_name = ft.AlertDialog(
-        title=ft.Text("Bem-vindo ao Chat", size=20),
-        content=ft.Column(
-            [
-                host_input,
-                port_input,
-                user_name,
-                ft.TextButton(
-                    text="Entrar",
-                    on_click=lambda e: join_chat(e),
-                ),
-            ],
-            expand=False,
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=10,
-        ),
-    )
-
-    # Linha do campo de input
-    message_input = ft.TextField(
-        label="Digite sua mensagem",
+    chat = ft.ListView(
         expand=True,
-        on_submit=lambda e: send_message(e.control.value, user_name.value),
-    )   
-    input_row = ft.Row(
-        controls=[
-            message_input,
-            ft.IconButton(
-                icon=ft.Icons.SEND,
-                tooltip="Enviar",
-                on_click=lambda e: send_message(message_input.value, user_name.value),
-            ),
-        ],
-        alignment=ft.MainAxisAlignment.CENTER,
-    )
-    
-    # Adiciona o campo de mensagens
-    message_list = ft.ListView(
         spacing=10,
-        expand=True,  # Faz com que o ListView ocupe o espaço disponível
-        auto_scroll=True,  # Permite rolagem automática
+        auto_scroll=True,
+    )
+    name_input = ft.TextField(
+        label="Usuário",
+        autofocus=True,
+    )
+    ip_input = ft.TextField(
+        label="IP",
+        value="127.0.0.1",
+    )
+    port_input = ft.TextField(
+        label="Porta",
+        value="5000"
+    )
+    msg_input = ft.TextField(
+        label="Mensagem",
+        expand=True,
+        autofocus=True,
+        shift_enter=True,
+    )
+    send_button = ft.ElevatedButton(
+        text="Enviar",
+        icon=ft.Icons.SEND,
     )
 
-    # Adiciona os controles à página
-    page.add(
-        ft.Column(
-            [
-                message_list,
-                input_row,
-            ],
-            expand=True,
-            spacing=10,
+    login_view = ft.Column(
+        controls=[],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+
+    chat_view = ft.Column(
+        controls=[
+            chat,
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        msg_input,
+                        send_button
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER
+                ),
+                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
+                padding=10,
+                border_radius=ft.border_radius.only(top_left=5, top_right=5),
+            )
+        ],
+        expand=True,
+        # spacing=10,
+        visible=False
+    )
+
+    def add_msg(msg: Message):
+        chat.controls.append(
+            ChatMessage(message=msg)
         )
+        page.update()
+
+    def send_click(e):
+        if msg_input.value:
+            msg = Message(cliente.name, msg_input.value)
+            add_msg(msg)
+            cliente.send_message(
+                msg_input.value
+            )
+            msg_input.value = ""
+            page.update()
+
+    def connect_click(e):
+        try:
+            cliente.connect(
+                ip_input.value,
+                int(port_input.value),
+                name_input.value
+            )
+            
+            page.snackbar = ft.SnackBar(
+                content=ft.Text(
+                    f"Conectado como {cliente.name}",
+                    bgcolor=ft.Colors.GREEN_500,
+                )
+            )
+            page.snackbar.open = True
+            page.snackbar.duration = 2000
+
+            login_view.visible = False
+            chat_view.visible = True
+
+            page.update()
+
+            threading.Thread(
+                target=cliente.receive_message,
+                args=(add_msg,),
+                daemon=True
+            ).start()
+        except Exception as e:
+            print(f"Erro ao conectar: {e}")
+
+    btn_connect = ft.ElevatedButton(
+        text="Conectar",
+        on_click=connect_click,
+        icon=ft.Icons.CONNECT_WITHOUT_CONTACT_ROUNDED,
+        bgcolor=ft.Colors.GREEN_500,
+        color=ft.Colors.WHITE,
+    )
+    send_button.on_click = send_click
+    msg_input.on_submit = send_click
+
+    login_view.controls.extend(
+        [
+            name_input,
+            ip_input,
+            port_input,
+            btn_connect
+        ]
     )
 
-    # Exibe o diálogo de configuração do nome de usuário
-    set_user_name.open = True
-
-    # Adiciona o EventDialog ao overlay da página
-    page.overlay.append(
-        set_user_name
+    page.add(
+        login_view, chat_view
     )
 
-    page.update()
-
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(target=main, assets_dir="assets", view=ft.WEB_BROWSER)
