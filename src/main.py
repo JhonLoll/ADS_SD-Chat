@@ -12,7 +12,7 @@ def main(page: ft.Page):
     page.vertical_alignment = ft.MainAxisAlignment.START
     page.horizontal_alignment = ft.CrossAxisAlignment.STRETCH
     page.window.width = 400
-    page.window.height = 600
+    page.window.height = 700
     # page.bgcolor = "#D9D9D9"
     page.fonts = {
         "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap",
@@ -85,10 +85,13 @@ def main(page: ft.Page):
     )
 
     def add_msg(msg: Message):
-        chat.controls.append(
-            ChatMessage(message=msg)
-        )
-        page.update()
+        # Executa o update na thread da UI
+        async def update_ui():
+            chat.controls.append(
+                ChatMessage(message=msg)
+            )
+            page.update()
+        page.run_task(update_ui)
 
     def send_click(e):
         if msg_input.value:
@@ -115,20 +118,34 @@ def main(page: ft.Page):
                 )
             )
             page.snackbar.open = True
-            page.snackbar.duration = 2000
 
             login_view.visible = False
             chat_view.visible = True
 
             page.update()
 
+            # Trata a exceção com uma thread
+            def thread_exception():
+                try:
+                    cliente.receive_message(add_msg)
+                except Exception as e:
+                    print(f"Erro na thread: {e}")
+
             threading.Thread(
-                target=cliente.receive_message,
-                args=(add_msg,),
+                target=thread_exception,
                 daemon=True
             ).start()
+            
         except Exception as e:
             print(f"Erro ao conectar: {e}")
+            page.snackbar = ft.SnackBar(
+                ft.Text(
+                    f"Erro {str(e)}",
+                    color=ft.Colors.RED
+                )
+            )
+            page.snackbar.open = True
+            page.update()
 
     btn_connect = ft.ElevatedButton(
         text="Conectar",
@@ -154,4 +171,4 @@ def main(page: ft.Page):
     )
 
 if __name__ == "__main__":
-    ft.app(target=main, assets_dir="assets", view=ft.WEB_BROWSER)
+    ft.app(target=main, assets_dir="assets", view=ft.FLET_APP)

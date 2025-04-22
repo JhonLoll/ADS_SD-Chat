@@ -5,28 +5,34 @@ from datetime import datetime
 # Lista para armazenar os clientes conectados
 clients = []
 
+# Adiciona lock para trabalhar com segurança nas threads
+clients_lock = threading.Lock()
+
 # Função para o broadcast de mensagens
 def broadcast(message, client_socket):
-    for client in clients:
-        if client != client_socket:
-            try:
-                # Envia a mensagem para todos os clientes, exceto o que enviou
-                client.send(message)
-            except:
-                # Se falhar, remove o cliente da lista
-                clients.remove(client)
+    # Protege o acesso à lista
+    with clients_lock:
+        for client in clients.copy():
+            if client != client_socket:
+                try:
+                    # Envia a mensagem para todos os clientes, exceto o que enviou
+                    client.send(message.encode('utf-8'))
+                except Exception as e:
+                    print(f"Erro: {e}")
+                    # Se falhar, remove o cliente da lista
+                    clients.remove(client)
 
 # Função para lidar com cada cliente
 def handle_client(client_socket, client_address):
     try:
         nome = client_socket.recv(1024).decode('utf-8')
         print(f"Nome do cliente {client_address}: {nome}")
-    except:
-        print(f"Erro ao receber o nome do cliente {client_address}.")
+    except Exception as e:
+        print(f"Erro ao receber o nome do cliente {client_address}: {e}")
         client_socket.close()
         return
     
-    boas_vindas = f"[{datetime.now().strftime('%H:%M:%S')}] {nome} entrou no chat!"
+    boas_vindas = f"[{datetime.now().strftime('%H:%M')}] {nome} entrou no chat!"
     broadcast(boas_vindas, client_socket)
 
     while True:
@@ -34,13 +40,13 @@ def handle_client(client_socket, client_address):
             # Recebe a mensagem do cliente
             msg = client_socket.recv(1024).decode('utf-8')
             if msg:
-                horario = datetime.now().strftime('%H:%M:%S')
-                broadcast(f"[{horario}] {nome}: {msg}".encode('utf-8'), client_socket)
+                horario = datetime.now().strftime('%H:%M')
+                broadcast(f"[{horario}] {nome}: {msg}", client_socket)
         except:
             # Se ocorrer um erro, remove o cliente e encerra o loop
             clients.remove(client_socket)
             client_socket.close()
-            broadcast(f"[{datetime.now().strftime('%H:%M:%S')}] {nome} saiu do chat.".encode('utf-8'), client_socket)
+            broadcast(f"[{datetime.now().strftime('%H:%M')}] {nome} saiu do chat.".encode('utf-8'), client_socket)
             break
 
 # Função principal do servidor
@@ -72,8 +78,10 @@ def start_server():
         client_socket, client_address = server_socket.accept()
         print(f"Conexão aceita de {client_address}")
 
-        # Adiciona o cliente à lista de clientes conectados
-        clients.append(client_socket)
+        # Acessa a lista com segurança
+        with clients_lock:
+            # Adiciona o cliente à lista de clientes conectados
+            clients.append(client_socket)
 
         # Cria uma nova thread para lidar com o cliente
         client_thread = threading.Thread(target=handle_client, args=(client_socket, client_address))

@@ -21,10 +21,20 @@ class ChatMessage(ft.Row):
             ),
             ft.Column(
                 [
-                    ft.Text(
-                        message.sender,
-                        weight=ft.FontWeight.BOLD,
-                        size=12,
+                    ft.Row(
+                        controls=[
+                            ft.Text(
+                                message.sender,
+                                weight=ft.FontWeight.BOLD,
+                                size=12,
+                            ),
+                            ft.Text(
+                                message.timestamp.strftime("%H:%M"),
+                                color=ft.Colors.GREY_400,
+                                size=10
+                            )
+                        ],
+                        spacing=5
                     ),
                     ft.Text(
                         message.content,

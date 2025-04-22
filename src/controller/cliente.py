@@ -21,15 +21,22 @@ class ChatClient:
         while True:
             try:
                 msg = self.socket.recv(1024).decode('utf-8')
-                if msg:
-                    parts = msg.split(": ", 1)
-                    if len(parts) == 2:
-                        sender, message = parts
-                        message = Message(sender.strip(), message.strip(), datetime.now())
+
+                # Remove a parte da hora da mensagem, e mostra apenas a mensagem em si
+                if msg.startswith('[') and ']' in msg:
+                    # = [12:34] (Pega apenas a partir daqui): 
+                    time_end = msg.index(']') + 1
+                    sender_part = msg[time_end:].strip()
+                    # = [12:34]: (Pega apenas a partir daqui) 
+                    if ': ' in sender_part:
+                        sender, message_content = sender_part.split(': ', 1)
+                        add_msg(Message(sender.strip(), message_content.strip()))
                     else:
-                        # Mensagens do sistema (entrada, saida, etc..)
-                        message = Message("Sistema", msg.strip(), datetime.now())
-                    add_msg(message)
+                        add_msg(Message("Sistema", msg))
+                else:
+                    add_msg(Message("Desconhecido", msg))
+            except ConnectionResetError:
+                add_msg(Message("Sistema", "Conexão com o servidor perdida"))
             except Exception as e:
                 print(f"Erro ao receber mensagem: {e}")
                 break
