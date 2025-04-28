@@ -13,14 +13,14 @@ def broadcast(message, client_socket):
     # Protege o acesso à lista
     with clients_lock:
         for client in clients.copy():
-            if client != client_socket:
-                try:
-                    # Envia a mensagem para todos os clientes, exceto o que enviou
-                    client.send(message.encode('utf-8'))
-                except Exception as e:
-                    print(f"Erro: {e}")
-                    # Se falhar, remove o cliente da lista
-                    clients.remove(client)
+            # if client != client_socket:
+            try:
+                # Envia a mensagem para todos os clientes, exceto o que enviou
+                client.send(message.encode('utf-8'))
+            except Exception as e:
+                print(f"Erro: {e}")
+                # Se falhar, remove o cliente da lista
+                clients.remove(client)
 
 # Função para lidar com cada cliente
 def handle_client(client_socket, client_address):
@@ -46,7 +46,8 @@ def handle_client(client_socket, client_address):
             # Se ocorrer um erro, remove o cliente e encerra o loop
             clients.remove(client_socket)
             client_socket.close()
-            broadcast(f"[{datetime.now().strftime('%H:%M')}] {nome} saiu do chat.".encode('utf-8'), client_socket)
+            close_message = f"[{datetime.now().strftime('%H:%M')}] {nome} saiu do chat."
+            broadcast(close_message, client_socket)
             break
 
 # Função principal do servidor

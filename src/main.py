@@ -95,14 +95,14 @@ def main(page: ft.Page):
 
     def send_click(e):
         if msg_input.value:
-            msg = Message(cliente.name, msg_input.value)
-            add_msg(msg)
+            # msg = Message(cliente.name, msg_input.value)
+            # add_msg(msg)
             cliente.send_message(
                 msg_input.value
             )
             msg_input.value = ""
             page.update()
-
+            
     def connect_click(e):
         try:
             cliente.connect(
