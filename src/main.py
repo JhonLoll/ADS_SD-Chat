@@ -13,6 +13,7 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.STRETCH
     page.window.width = 400
     page.window.height = 700
+    page.scroll = None
     # page.bgcolor = "#D9D9D9"
     page.fonts = {
         "Roboto": "https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap",
@@ -25,7 +26,6 @@ def main(page: ft.Page):
     #     font_family="Roboto",
     #     font_size=14,
     # )
-    page.scroll = ft.ScrollMode.AUTO
 
     cliente = ChatClient()
 
@@ -48,39 +48,48 @@ def main(page: ft.Page):
     )
     msg_input = ft.TextField(
         label="Mensagem",
-        expand=True,
         autofocus=True,
         shift_enter=True,
+        min_lines=1,
+        max_lines=5,
+        filled=True,
+        expand=True,
     )
-    send_button = ft.ElevatedButton(
-        text="Enviar",
-        icon=ft.Icons.SEND,
+    send_button = ft.IconButton(
+        icon=ft.Icons.SEND_ROUNDED,
+        tooltip="Send message",
     )
 
     login_view = ft.Column(
         controls=[],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True,
     )
 
     chat_view = ft.Column(
         controls=[
-            chat,
             ft.Container(
-                content=ft.Row(
+                content=chat,
+                border=ft.border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.BLACK)),
+                border_radius=ft.border_radius.only(top_left=5, top_right=5),
+                expand=True,
+            ),
+            ft.Container(
+                ft.Row(
                     controls=[
                         msg_input,
                         send_button
                     ],
                     alignment=ft.MainAxisAlignment.CENTER
                 ),
-                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
-                padding=10,
-                border_radius=ft.border_radius.only(top_left=5, top_right=5),
             )
+            # bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.BLACK),
+            # padding=10,
+            # border_radius=ft.border_radius.only(top_left=5, top_right=5),
         ],
         expand=True,
-        # spacing=10,
+        spacing=0,
         visible=False
     )
 
@@ -167,7 +176,15 @@ def main(page: ft.Page):
     )
 
     page.add(
-        login_view, chat_view
+        ft.Container(
+            content=ft.Stack(
+                controls=[
+                    login_view, chat_view
+                ],
+                expand=True,
+            ),
+            expand=True,
+        )
     )
 
 if __name__ == "__main__":
