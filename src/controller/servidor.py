@@ -44,10 +44,17 @@ def handle_client(client_socket, client_address):
                 broadcast(f"[{horario}] {nome}: {msg}", client_socket)
         except:
             # Se ocorrer um erro, remove o cliente e encerra o loop
-            clients.remove(client_socket)
+            with clients_lock:
+                clients.remove(client_socket)
+                remaining_clients = len(clients)
+            
             client_socket.close()
             close_message = f"[{datetime.now().strftime('%H:%M')}] {nome} saiu do chat."
             broadcast(close_message, client_socket)
+
+            print(f"Cliente {client_address} desconectado.")
+            print(f"Clientes conectados: {remaining_clients}")
+
             break
 
 # Função principal do servidor
@@ -89,6 +96,7 @@ def start_server():
         client_thread.start()
 
         print(f"Atualmente {len(clients)} cliente(s) conectado(s).")
+
 
 if __name__ == "__main__":
     start_server()
